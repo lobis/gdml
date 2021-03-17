@@ -140,9 +140,25 @@ val geometry = Gdml {
             Chamber.CathodeCopperSupportThickness.mm, "cathodePatternDisk"
         ) { rmin = Chamber.CathodePatternDiskRadius.mm - Chamber.CathodePatternLineWidth.mm }
 
-        // TODO: pattern
 
-        val cathodeCopperDiskVolume = volume(materialsMap["Copper"]!!, cathodePatternDisk, "cathodeCopperDiskFinal")
+        var cathodeCopperDiskSolidAux: GdmlRef<GdmlUnion> = GdmlRef<GdmlUnion>("")
+
+        for (i in 0..3) {
+            cathodeCopperDiskSolidAux =
+                solids.union(
+                    if (i > 0) cathodeCopperDiskSolidAux else cathodeCopperDiskSolid,
+                    cathodePatternLine,
+                    "cathodeCopperDiskSolidAux$i"
+                ) {
+                    rotation = GdmlRotation(
+                        unit = AUnit.DEG, x = 0, y = 0, z = 45 * i
+                    )
+                }
+        }
+
+        val cathodeCopperDiskFinal =
+            solids.union(cathodeCopperDiskSolidAux, cathodePatternDisk, "cathodeCopperDiskFinal")
+        val cathodeCopperDiskVolume = volume(materialsMap["Copper"]!!, cathodeCopperDiskFinal, "cathodeCopperDiskFinal")
 
         // gas
 
@@ -150,12 +166,10 @@ val geometry = Gdml {
             Chamber.Diameter.mm * 0.5 - Chamber.TeflonWallThickness.mm,
             Chamber.Height.mm, "gasSolidOriginal"
         )
-
         val gasSolidAux =
             solids.subtraction(gasSolidOriginal, copperReadoutSolid, "gasSolidAux") {
                 position = GdmlPosition(z = -Chamber.Height.mm * 0.5 + Chamber.ReadoutCopperThickness.mm * 0.5)
             }
-
         val gasSolid =
             solids.subtraction(gasSolidAux, cathodeWindowSolid, "gasSolid") {
                 position = GdmlPosition(z = Chamber.Height.mm * 0.5 - Chamber.CathodeWindowThickness.mm * 0.5)
@@ -164,6 +178,7 @@ val geometry = Gdml {
         val gasVolume = volume(materialsMap["Gas"]!!, gasSolid, "gasVolume")
 
         val chamberVolume = assembly {
+            /*
             physVolume(gasVolume) {
                 name = "gas"
             }
@@ -219,7 +234,13 @@ val geometry = Gdml {
                 }
             }
 
-
+            */
+            physVolume(cathodeCopperDiskVolume) {
+                name = "cathodeCopperDiskPattern"
+                position {
+                    z = Chamber.Height.mm * 0.5 + Chamber.CathodeCopperSupportThickness.mm * 0.5
+                }
+            }
         }
 
         // world setup
