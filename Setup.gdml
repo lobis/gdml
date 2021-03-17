@@ -1,0 +1,37 @@
+<gdml>
+    <define/>
+    <materials>
+        <material name="G4_AIR"/>
+        <material name="G4_Cu"/>
+    </materials>
+    <solids>
+        <box name="worldBox" x="1000.0" y="1000.0" z="1000.0"/>
+        <box name="chamberSolidBase" x="134.0" y="134.0" z="30.0"/>
+        <tube name="chamberSolidHole" rmax="51.0" z="30.0" rmin="0.0" startphi="0.0" deltaphi="6.283185307179586"/>
+        <subtraction name="chamberSolid">
+            <first ref="chamberSolidBase"/>
+            <second ref="chamberSolidHole"/>
+        </subtraction>
+        <box name="chamberBackplateSolid" x="134.0" y="134.0" z="1.0"/>
+    </solids>
+    <structure>
+        <volume name="chamberBodyVolume">
+            <materialref ref="G4_Cu"/>
+            <solidref ref="chamberSolid"/>
+        </volume>
+        <volume name="chamberBackplateVolume">
+            <materialref ref="G4_Cu"/>
+            <solidref ref="chamberBackplateSolid"/>
+        </volume>
+        <volume name="world">
+            <physvol name="chamberBody">
+                <volumeref ref="chamberBodyVolume"/>
+            </physvol>
+            <materialref ref="G4_AIR"/>
+            <solidref ref="worldBox"/>
+        </volume>
+    </structure>
+    <setup name="Default" version="1.0">
+        <world ref="world"/>
+    </setup>
+</gdml>
