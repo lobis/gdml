@@ -7,3 +7,5 @@ Implementing complex GDML geometries with https://github.com/mipt-npm/gdml.kt.
 ```
 
 This will run the `main.kt` which will create a GDML file at the root called `Setup.gdml`.
+
+To view this geometry you can run the included ROOT script via `root Gdml.C`.
