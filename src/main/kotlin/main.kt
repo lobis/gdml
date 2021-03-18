@@ -96,7 +96,10 @@ val geometry = Gdml {
             rmin = Chamber.CathodeCopperSupportInnerRadius.mm
         }
         val cathodeTeflonDiskSolid =
-            solids.subtraction(cathodeTeflonDiskBaseSolid, cathodeCopperDiskSolid, "cathodeTeflonDiskSolid")
+            solids.subtraction(cathodeTeflonDiskBaseSolid, cathodeCopperDiskSolid, "cathodeTeflonDiskSolid") {
+                position =
+                    GdmlPosition(z = -Chamber.CathodeTeflonDiskThickness.mm * 0.5 + Chamber.CathodeCopperSupportThickness.mm * 0.5)
+            }
 
         val cathodeTeflonDiskVolume =
             volume(materialsMap["Teflon"]!!, cathodeTeflonDiskSolid, "cathodeTeflonDiskVolume") {}
@@ -109,22 +112,10 @@ val geometry = Gdml {
             )
         val cathodeWindowVolume = volume(materialsMap["Mylar"]!!, cathodeWindowSolid, "cathodeWindowVolume")
 
-        val cathodeFillingBaseSolid = solids.tube(
-            Chamber.CathodeTeflonDiskHoleRadius.mm,
-            Chamber.CathodeTeflonDiskThickness.mm,
-            "cathodeFillingBaseSolid"
-        )
-        val cathodeFillingSolid =
-            solids.subtraction(cathodeFillingBaseSolid, cathodeCopperDiskSolid, "cathodeFillingSolid") {
-                position = GdmlPosition(z = Chamber.Height.mm * 0.5 - Chamber.CathodeWindowThickness.mm * 0.5)
-            }
-
-        val cathodeFillingVolume = volume(materialsMap["Vacuum"]!!, cathodeFillingSolid, "cathodeFillingVolume") {}
-
         // cathode copper disk pattern
         val cathodePatternLineAux = solids.box(
             Chamber.CathodePatternLineWidth.mm,
-            Chamber.CathodeCopperSupportInnerRadius.mm,
+            Chamber.CathodeCopperSupportInnerRadius.mm * 2,
             Chamber.CathodeCopperSupportThickness.mm,
             "cathodePatternLineAux"
         )
@@ -160,6 +151,21 @@ val geometry = Gdml {
             solids.union(cathodeCopperDiskSolidAux, cathodePatternDisk, "cathodeCopperDiskFinal")
         val cathodeCopperDiskVolume = volume(materialsMap["Copper"]!!, cathodeCopperDiskFinal, "cathodeCopperDiskFinal")
 
+        val cathodeFillingBaseSolid = solids.tube(
+            Chamber.CathodeTeflonDiskHoleRadius.mm,
+            Chamber.CathodeTeflonDiskThickness.mm,
+            "cathodeFillingBaseSolid"
+        )
+        val cathodeFillingSolid =
+            solids.subtraction(cathodeFillingBaseSolid, cathodeCopperDiskFinal, "cathodeFillingSolid") {
+                position =
+                    GdmlPosition(z = -Chamber.CathodeTeflonDiskThickness.mm * 0.5 + Chamber.CathodeCopperSupportThickness.mm * 0.5)
+            }
+
+
+        val cathodeFillingVolume = volume(materialsMap["Vacuum"]!!, cathodeFillingSolid, "cathodeFillingVolume") {}
+
+
         // gas
 
         val gasSolidOriginal = solids.tube(
@@ -169,20 +175,18 @@ val geometry = Gdml {
         val gasSolidAux =
             solids.subtraction(gasSolidOriginal, copperReadoutSolid, "gasSolidAux") {
                 position = GdmlPosition(z = -Chamber.Height.mm * 0.5 + Chamber.ReadoutCopperThickness.mm * 0.5)
+                rotation = GdmlRotation(unit = AUnit.DEG, z = 45)
             }
         val gasSolid =
             solids.subtraction(gasSolidAux, cathodeWindowSolid, "gasSolid") {
                 position = GdmlPosition(z = Chamber.Height.mm * 0.5 - Chamber.CathodeWindowThickness.mm * 0.5)
-                rotation = GdmlRotation(unit = AUnit.DEG, z = 45)
             }
         val gasVolume = volume(materialsMap["Gas"]!!, gasSolid, "gasVolume")
 
         val chamberVolume = assembly {
-            /*
             physVolume(gasVolume) {
                 name = "gas"
             }
-
             physVolume(chamberBackplateVolume) {
                 name = "chamberBackplate"
                 position {
@@ -214,6 +218,12 @@ val geometry = Gdml {
                     z = 45
                 }
             }
+            physVolume(cathodeWindowVolume) {
+                name = "cathodeWindow"
+                position {
+                    z = Chamber.Height.mm * 0.5 - Chamber.CathodeWindowThickness.mm * 0.5
+                }
+            }
 
             physVolume(cathodeTeflonDiskVolume) {
                 name = "cathodeTeflonDisk"
@@ -221,12 +231,7 @@ val geometry = Gdml {
                     z = Chamber.Height.mm * 0.5 + Chamber.CathodeTeflonDiskThickness.mm * 0.5
                 }
             }
-            physVolume(cathodeWindowVolume) {
-                name = "cathodeWindow"
-                position {
-                    z = Chamber.Height.mm * 0.5 - Chamber.CathodeWindowThickness.mm * 0.5
-                }
-            }
+
             physVolume(cathodeFillingVolume) {
                 name = "cathodeFilling"
                 position {
@@ -234,7 +239,6 @@ val geometry = Gdml {
                 }
             }
 
-            */
             physVolume(cathodeCopperDiskVolume) {
                 name = "cathodeCopperDiskPattern"
                 position {

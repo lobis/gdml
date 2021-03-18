@@ -5,10 +5,10 @@ void Gdml(string gdmlFilename="Setup.gdml"){
     for (int i = 0; i < gGeoManager->GetListOfVolumes()->GetEntries(); i++) {
         TGeoVolume* geoVolume = gGeoManager->GetVolume(i); // https://root.cern/doc/v606/classTGeoVolume.html
         string materialName = geoVolume->GetMaterial()->GetName();
-        if (materialName == "G4_AIR" || materialName == "G4_Galactic"){
-            geoVolume->SetTransparency(100);
+        if (materialName == "G4_AIR" || materialName == "G4_Galactic" || materialName == "Vacuum"){
+             geoVolume->SetTransparency(100);
         }else{
-             geoVolume->SetTransparency(60);
+             geoVolume->SetTransparency(transparency);
         }
         // geoVolume->Raytrace();
         //geoVolume->SetTransparency(transparency);
@@ -24,7 +24,7 @@ void Gdml(string gdmlFilename="Setup.gdml"){
 
     TEveManager::Create();
     TGeoNode* node = gGeoManager->GetTopNode();
-    node->CheckOverlaps();
+    node->CheckOverlaps(0.001);
     TEveGeoTopNode* top_node = new TEveGeoTopNode(gGeoManager, node);
     gEve->AddGlobalElement(top_node);
 
