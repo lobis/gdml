@@ -1,5 +1,4 @@
 import space.kscience.gdml.*
-
 import java.io.File
 
 enum class Chamber(val mm: Double) {
@@ -58,6 +57,22 @@ enum class Shielding(val mm: Double) {
     OffsetZ(DetectorToShieldingSeparation.mm + Chamber.Height.mm / 2 + Chamber.ReadoutKaptonThickness.mm + Chamber.BackplateThickness.mm),
 }
 
+// vetoes
+enum class VetoLengths(val mm: Double) {
+    LongSideStandard(800.0), LongSideSmall(300.0), LongSideLarge(1500.0),
+}
+
+enum class Veto(val mm: Double) {
+    Width(200.0), Thickness(50.0), LongSide(VetoLengths.LongSideStandard.mm),
+    CaptureLayerThickness(1.0), WrappingThickness(1.0),
+    SeparationAdjacent(5.0),
+
+    // light guide and PMT
+    scintillatorLightGuide1Length(130.0), scintillatorLightGuide2Length(80.0),
+    scintillatorPhotomultiplierLength(233.5), scintillatorPhotomultiplierDiameter(70.0),
+}
+
+@ExperimentalUnsignedTypes
 val geometry = Gdml {
     // materials
     loadMaterialsFromUrl("https://raw.githubusercontent.com/rest-for-physics/materials/main/materials.xml")
@@ -69,10 +84,13 @@ val geometry = Gdml {
         "Teflon" to materials.composite("G4_TEFLON"),
         "Kapton" to materials.composite("G4_KAPTON"),
         "Mylar" to materials.composite("G4_MYLAR"),
+        "Scintillator" to materials.composite("BC408"),
+        "LightGuide" to materials.composite("G4_LUCITE"),
+        "NeutronCapture" to materials.composite("G4_Cd"),
+        "ScintillatorWrapping" to materials.composite("G4_NEOPRENE"),
     )
 
     structure {
-
         fun chamberVolume(): GdmlRef<GdmlAssembly> {
             val chamberBodySolid = solids.subtraction(
                 solids.box(
@@ -168,17 +186,13 @@ val geometry = Gdml {
 
 
             var cathodeCopperDiskSolidAux: GdmlRef<GdmlUnion> = GdmlRef("")
-
             for (i in 0..3) {
                 cathodeCopperDiskSolidAux =
                     solids.union(
                         if (i > 0) cathodeCopperDiskSolidAux else cathodeCopperDiskSolid,
-                        cathodePatternLine,
-                        "cathodeCopperDiskSolidAux$i"
+                        cathodePatternLine, "cathodeCopperDiskSolidAux$i"
                     ) {
-                        rotation = GdmlRotation(
-                            unit = AUnit.DEG, x = 0, y = 0, z = 45 * i
-                        )
+                        rotation = GdmlRotation(unit = AUnit.DEG, x = 0, y = 0, z = 45 * i)
                     }
             }
 
@@ -234,49 +248,32 @@ val geometry = Gdml {
                 }
                 physVolume(kaptonReadoutVolume) {
                     name = "kaptonReadout"
-                    position {
-                        z = -Chamber.Height.mm / 2 - Chamber.ReadoutKaptonThickness.mm / 2
-                    }
+                    position { z = -Chamber.Height.mm / 2 - Chamber.ReadoutKaptonThickness.mm / 2 }
                 }
                 physVolume(copperReadoutVolume) {
                     name = "copperReadout"
-                    position {
-                        z = -Chamber.Height.mm / 2 + Chamber.ReadoutCopperThickness.mm / 2
-                    }
-                    rotation {
-                        unit = AUnit.DEG
-                        z = 45
-                    }
+                    position { z = -Chamber.Height.mm / 2 + Chamber.ReadoutCopperThickness.mm / 2 }
+                    rotation { unit = AUnit.DEG; z = 45 }
                 }
                 physVolume(cathodeWindowVolume) {
                     name = "cathodeWindow"
-                    position {
-                        z = Chamber.Height.mm / 2 - Chamber.CathodeWindowThickness.mm / 2
-                    }
+                    position { z = Chamber.Height.mm / 2 - Chamber.CathodeWindowThickness.mm / 2 }
                 }
 
                 physVolume(cathodeTeflonDiskVolume) {
                     name = "cathodeTeflonDisk"
-                    position {
-                        z = Chamber.Height.mm / 2 + Chamber.CathodeTeflonDiskThickness.mm / 2
-                    }
+                    position { z = Chamber.Height.mm / 2 + Chamber.CathodeTeflonDiskThickness.mm / 2 }
                 }
                 physVolume(cathodeFillingVolume) {
                     name = "cathodeFilling"
-                    position {
-                        z = Chamber.Height.mm / 2 + Chamber.CathodeTeflonDiskThickness.mm / 2
-                    }
+                    position { z = Chamber.Height.mm / 2 + Chamber.CathodeTeflonDiskThickness.mm / 2 }
                 }
                 physVolume(cathodeCopperDiskVolume) {
                     name = "cathodeCopperDiskPattern"
-                    position {
-                        z = Chamber.Height.mm / 2 + Chamber.CathodeCopperSupportThickness.mm / 2
-                    }
+                    position { z = Chamber.Height.mm / 2 + Chamber.CathodeCopperSupportThickness.mm / 2 }
                 }
             }
         };
-        val chamberVolume = chamberVolume()
-
         fun detectorPipeVolume(): GdmlRef<GdmlAssembly> {
 
             val detectorPipeChamberFlangeSolid = solids.tube(
@@ -360,9 +357,7 @@ val geometry = Gdml {
                 }
             val detectorPipeInsideAux4 =
                 solids.union(detectorPipeInsideAux3, detectorPipeInside3of3Solid, "detectorPipeInsideAux4") {
-                    position = GdmlPosition(
-                        z = DetectorPipe.InsideUnion4Z.mm
-                    )
+                    position = GdmlPosition(z = DetectorPipe.InsideUnion4Z.mm)
                 }
             val detectorPipeInside =
                 solids.union(detectorPipeInsideAux4, detectorPipeInsideCone3of3Solid, "detectorPipeInside") {
@@ -382,14 +377,10 @@ val geometry = Gdml {
                 }
                 physVolume(detectorPipeFillingVolume) {
                     name = "detectorPipeFilling"
-                    position {
-                        z = DetectorPipe.FillingOffsetWithPipe.mm
-                    }
+                    position { z = DetectorPipe.FillingOffsetWithPipe.mm }
                 }
             }
         };
-        val detectorPipeVolume = detectorPipeVolume()
-
         fun shieldingVolume(): GdmlRef<GdmlAssembly> {
             val leadBoxSolid = solids.box(Shielding.SizeXY.mm, Shielding.SizeXY.mm, Shielding.SizeZ.mm, "leadBoxSolid")
             val leadBoxShaftSolid =
@@ -407,34 +398,196 @@ val geometry = Gdml {
             return assembly {
                 physVolume(leadShieldingVolume) {
                     name = "shielding20cm"
-                    position {
-                        z = -Shielding.OffsetZ.mm
-                    }
+                    position { z = -Shielding.OffsetZ.mm }
                 }
             }
         };
-        val shieldingVolume = shieldingVolume()
+
+        fun veto(length: VetoLengths, includePMT: Boolean = false): GdmlRef<GdmlAssembly> {
+            val l = "[${length.mm}mm]"
+            val scintillatorSolid = solids.box(
+                Veto.Width.mm,
+                Veto.Thickness.mm,
+                length.mm,
+                "scintillatorSolid$l",
+            )
+            val scintillatorVolume =
+                volume(materialsMap["Scintillator"]!!, scintillatorSolid, "scintillatorVolume$l")
+
+            val captureLayerSolid = solids.box(
+                Veto.Width.mm,
+                Veto.CaptureLayerThickness.mm,
+                length.mm,
+                "captureLayerSolid$l"
+            )
+            val captureLayerVolume = volume(materialsMap["NeutronCapture"]!!, captureLayerSolid, "captureLayerVolume")
+
+            val scintillatorWrappingBaseSolid = solids.box(
+                Veto.Width.mm + 2 * Veto.WrappingThickness.mm,
+                Veto.Thickness.mm + 2 * Veto.WrappingThickness.mm,
+                length.mm + 2 * Veto.WrappingThickness.mm,
+                "scintillatorWrappingBaseSolid$l"
+            )
+            val scintillatorWrappingHoleSolid = solids.box(
+                Veto.Width.mm,
+                Veto.Thickness.mm,
+                length.mm,
+                "scintillatorWrappingHoleSolid$l",
+            )
+            val scintillatorWrappingFullSolid = solids.subtraction(
+                scintillatorWrappingBaseSolid,
+                scintillatorWrappingHoleSolid,
+                "scintillatorWrappingFullSolid$l"
+            )
+            val scintillatorWrappingSolid =
+                solids.subtraction(
+                    scintillatorWrappingFullSolid,
+                    solids.box(
+                        Veto.Width.mm + 2 * Veto.WrappingThickness.mm,
+                        Veto.Thickness.mm + 2 * Veto.WrappingThickness.mm,
+                        Veto.WrappingThickness.mm * 1.2, // we remove a bit more, it shouldn't matter since its a sub
+                        "scintillatorWrappingRemoveSideSolid"
+                    ), "scintillatorWrappingSolid$l"
+                ) {
+                    position =
+                        GdmlPosition(z = length.mm / 2 + Veto.WrappingThickness.mm / 2)
+                }
+            val scintillatorWrappingVolume =
+                volume(materialsMap["ScintillatorWrapping"]!!, scintillatorWrappingSolid, "scintillatorWrappingSolid")
+
+            // light guide and PMT
+            val scintillatorLightGuide1Solid = solids.trd(
+                Veto.Width.mm,
+                Veto.Width.mm,
+                Veto.Thickness.mm + 10,
+                Veto.Thickness.mm,
+                Veto.scintillatorLightGuide1Length.mm,
+                "scintillatorLightGuide1Solid"
+            )
+            val scintillatorLightGuide2Solid = solids.trd(
+                70,
+                Veto.Width.mm,
+                70,
+                Veto.Thickness.mm + 10,
+                Veto.scintillatorLightGuide2Length.mm,
+                "scintillatorLightGuide2Solid"
+            )
+            val scintillatorLightGuideSolid = solids.union(
+                scintillatorLightGuide1Solid,
+                scintillatorLightGuide2Solid,
+                "scintillatorLightGuideSolid"
+            ) {
+                position =
+                    GdmlPosition(z = -Veto.scintillatorLightGuide2Length.mm / 2 - Veto.scintillatorLightGuide1Length.mm / 2)
+            }
+
+            val scintillatorLightGuideVolume =
+                volume(materialsMap["LightGuide"]!!, scintillatorLightGuideSolid, "scintillatorLightGuideVolume")
+
+            // this should be in a 'if (includePMT)' but we need to define an empty 'GdmlVolume' or equivalent...
+            // TODO: find out how
+            val scintillatorPhotomultiplierSolid = solids.tube(
+                Veto.scintillatorPhotomultiplierDiameter.mm / 2,
+                Veto.scintillatorPhotomultiplierLength.mm,
+                "scintillatorPhotomultiplierSolid"
+            )
+            val scintillatorPhotomultiplierVolume = volume(
+                materialsMap["Vacuum"]!!,
+                scintillatorPhotomultiplierSolid,
+                "scintillatorPhotomultiplierVolume"
+            )
+
+            return assembly {
+                physVolume(scintillatorVolume) {
+                    name = "scintillator$l"
+                }
+                physVolume(scintillatorWrappingVolume) {
+                    name = "scintillatorWrapping$l"
+                }
+                val captureLayerYOffset =
+                    Veto.Thickness.mm / 2 + Veto.WrappingThickness.mm + Veto.CaptureLayerThickness.mm / 2
+                physVolume(captureLayerVolume) {
+                    name = "captureLayerN1$l"
+                    position { y = captureLayerYOffset }
+                }
+                physVolume(captureLayerVolume) {
+                    name = "captureLayerN2$l"
+                    position { y = -captureLayerYOffset }
+                }
+                physVolume(scintillatorLightGuideVolume) {
+                    name = "lightGuide"
+                    position { z = -length.mm / 2 - Veto.scintillatorLightGuide1Length.mm / 2 }
+                }
+                if (includePMT) {
+                    physVolume(scintillatorPhotomultiplierVolume) {
+                        name = "PMT"
+                        position {
+                            z =
+                                -length.mm / 2 - Veto.scintillatorPhotomultiplierLength.mm / 2 - Veto.scintillatorLightGuide1Length.mm - Veto.scintillatorLightGuide2Length.mm
+                        }
+                    }
+                }
+            }
+        }
+
+        fun vetoLayer(n: Int, separation: Double = Veto.SeparationAdjacent.mm): GdmlRef<GdmlAssembly> {
+            val step = Veto.Width.mm + 2 * Veto.WrappingThickness.mm + separation
+            val offset = step * (n + 1) / 2.0
+            return assembly {
+                for (i in 1..n) {
+                    physVolume(veto(VetoLengths.LongSideStandard)) {
+                        name = "veto$i"
+                        position { x = step * i - offset }
+                    }
+                }
+            }
+        }
+
+        fun vetoGroup(): GdmlRef<GdmlAssembly> {
+            // TODO: find out why this is not displayed, yet it can be seen in the event viewer and looks OK
+            return assembly {
+                for (i in 1..4) {
+                    physVolume(vetoLayer(4)) {
+                        name = "layer$i"
+                        position { y = (i - 1) * 70 }
+                    }
+                }
+            }
+        }
 
         val worldSize = 4000
         val worldBox = solids.box(worldSize, worldSize, worldSize, "worldBox")
         world = volume(materials.composite("G4_AIR"), worldBox, "world")
         {
-            physVolume(chamberVolume) {
+            physVolume(chamberVolume()) {
                 name = "Chamber"
             }
-            physVolume(detectorPipeVolume) {
+            physVolume(detectorPipeVolume()) {
                 name = "DetectorPipe"
-                position {
-                    z = DetectorPipe.ZinWorld.mm
+                position { z = DetectorPipe.ZinWorld.mm }
+            }
+            physVolume(shieldingVolume()) {
+                name = "Shielding"
+            }
+
+            // This is correctly displayed
+            for (i in 0..2) {
+                physVolume(vetoLayer(i + 1)) {
+                    name = "VetoLayerTest$i"
+                    position { z = -400 - i * 70 }
+                    rotation { unit = AUnit.DEG; x = 90; y = 90 * i }
                 }
             }
-            physVolume(shieldingVolume) {
-                name = "Shielding"
+            // This is not working for some reason
+            physVolume(vetoGroup()) {
+                name = "VetoSystem"
+                position { y = 500 }
             }
         }
     }
 }
 
+@ExperimentalUnsignedTypes
 fun main() {
     File("Setup.gdml").writeText(geometry.encodeToString())
 }

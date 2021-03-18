@@ -2,11 +2,15 @@ void Gdml(string gdmlFilename="Setup.gdml"){
     TGeoManager::Import("Setup.gdml");
     TGeoElementTable *table = gGeoManager->GetElementTable();
     float transparency = 40;
+    // this probably does not work too well with nested volumes
     for (int i = 0; i < gGeoManager->GetListOfVolumes()->GetEntries(); i++) {
         TGeoVolume* geoVolume = gGeoManager->GetVolume(i); // https://root.cern/doc/v606/classTGeoVolume.html
+        if (geoVolume == nullptr){
+            continue;
+        }
         string materialName = geoVolume->GetMaterial()->GetName();
         if (materialName == "G4_AIR" || materialName == "G4_Galactic" || materialName == "Vacuum"){
-             geoVolume->SetTransparency(100);
+             geoVolume->SetTransparency(95);
         }else{
              geoVolume->SetTransparency(transparency);
         }
@@ -24,7 +28,7 @@ void Gdml(string gdmlFilename="Setup.gdml"){
 
     TEveManager::Create();
     TGeoNode* node = gGeoManager->GetTopNode();
-    node->CheckOverlaps(0.001);
+    node->CheckOverlaps(0.0001);
     TEveGeoTopNode* top_node = new TEveGeoTopNode(gGeoManager, node);
     gEve->AddGlobalElement(top_node);
 
