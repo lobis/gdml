@@ -1,7 +1,6 @@
 import space.kscience.gdml.*
 
 import java.io.File
-import kotlin.io.*
 
 enum class Chamber(val mm: Double) {
     // Body + Backplate
@@ -51,6 +50,13 @@ enum class DetectorPipe(val mm: Double) {
     ZinWorld(ChamberFlangeThickness.mm / 2 + Chamber.Height.mm / 2 + Chamber.CathodeTeflonDiskThickness.mm),
 }
 
+enum class Shielding(val mm: Double) {
+    SizeXY(590.0), SizeZ(540.0),
+    ShaftShortSideX(194.0), ShaftShortSideY(170.0),
+    ShaftLongSide(340.0),
+    DetectorToShieldingSeparation(-60.0),
+    OffsetZ(DetectorToShieldingSeparation.mm + Chamber.Height.mm / 2 + Chamber.ReadoutKaptonThickness.mm + Chamber.BackplateThickness.mm),
+}
 
 val geometry = Gdml {
     // materials
@@ -66,14 +72,8 @@ val geometry = Gdml {
     )
 
     structure {
-        // world
-        val worldSize = 4000
-        val worldMaterial = materials.composite("G4_AIR")
-        val worldBox = solids.box(worldSize, worldSize, worldSize, "worldBox")
 
-        // chamber
-        fun chamberVolume():
-                GdmlRef<GdmlAssembly> {
+        fun chamberVolume(): GdmlRef<GdmlAssembly> {
             val chamberBodySolid = solids.subtraction(
                 solids.box(
                     Chamber.SquareSide.mm,
@@ -274,12 +274,10 @@ val geometry = Gdml {
                     }
                 }
             }
-        }
-
+        };
         val chamberVolume = chamberVolume()
 
-        fun detectorPipeVolume():
-                GdmlRef<GdmlAssembly> {
+        fun detectorPipeVolume(): GdmlRef<GdmlAssembly> {
 
             val detectorPipeChamberFlangeSolid = solids.tube(
                 DetectorPipe.ChamberFlangeRadius.mm,
@@ -389,12 +387,37 @@ val geometry = Gdml {
                     }
                 }
             }
-        }
-
+        };
         val detectorPipeVolume = detectorPipeVolume()
 
-        // world setup
-        world = volume(worldMaterial, worldBox, "world")
+        fun shieldingVolume(): GdmlRef<GdmlAssembly> {
+            val leadBoxSolid = solids.box(Shielding.SizeXY.mm, Shielding.SizeXY.mm, Shielding.SizeZ.mm, "leadBoxSolid")
+            val leadBoxShaftSolid =
+                solids.box(
+                    Shielding.ShaftShortSideX.mm,
+                    Shielding.ShaftShortSideY.mm,
+                    Shielding.ShaftLongSide.mm,
+                    "leadBoxShaftSolid"
+                )
+            val leadBoxWithShaftSolid = solids.subtraction(leadBoxSolid, leadBoxShaftSolid, "leadBoxWithShaftSolid") {
+                position = GdmlPosition(z = Shielding.SizeZ.mm / 2 - Shielding.ShaftLongSide.mm / 2)
+            }
+            val leadShieldingVolume = volume(materialsMap["Lead"]!!, leadBoxWithShaftSolid, "ShieldingVolume")
+
+            return assembly {
+                physVolume(leadShieldingVolume) {
+                    name = "shielding20cm"
+                    position {
+                        z = -Shielding.OffsetZ.mm
+                    }
+                }
+            }
+        };
+        val shieldingVolume = shieldingVolume()
+
+        val worldSize = 4000
+        val worldBox = solids.box(worldSize, worldSize, worldSize, "worldBox")
+        world = volume(materials.composite("G4_AIR"), worldBox, "world")
         {
             physVolume(chamberVolume) {
                 name = "Chamber"
@@ -404,6 +427,9 @@ val geometry = Gdml {
                 position {
                     z = DetectorPipe.ZinWorld.mm
                 }
+            }
+            physVolume(shieldingVolume) {
+                name = "Shielding"
             }
         }
     }
