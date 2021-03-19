@@ -86,6 +86,7 @@ val geometry = Gdml {
         "LightGuide" to materials.composite("G4_LUCITE"),
         "NeutronCapture" to materials.composite("G4_Cd"),
         "ScintillatorWrapping" to materials.composite("G4_NEOPRENE"),
+        "PMT" to materials.composite("G4_STAINLESS-STEEL"),
     )
 
     structure {
@@ -510,7 +511,7 @@ val geometry = Gdml {
                 "scintillatorPhotomultiplierSolid"
             )
             val scintillatorPhotomultiplierVolume = volume(
-                materialsMap["Vacuum"]!!,
+                materialsMap["PMT"]!!,
                 scintillatorPhotomultiplierSolid,
                 "scintillatorPhotomultiplierVolume"
             )
@@ -547,12 +548,16 @@ val geometry = Gdml {
                 }
             }
         };
-        fun vetoLayer(n: Int, separation: Double = Veto.SeparationAdjacent.mm): GdmlRef<GdmlAssembly> {
+        fun vetoLayer(
+            n: Int,
+            separation: Double = Veto.SeparationAdjacent.mm,
+            length: VetoLengths = VetoLengths.LongSideStandard
+        ): GdmlRef<GdmlAssembly> {
             val step = Veto.Width.mm + 2 * Veto.WrappingThickness.mm + separation
             val offset = step * (n + 1) / 2.0
             return assembly {
                 for (i in 1..n) {
-                    physVolume(veto(VetoLengths.LongSideStandard)) {
+                    physVolume(veto(length)) {
                         name = "veto$i"
                         position { x = step * i - offset }
                     }
@@ -571,7 +576,38 @@ val geometry = Gdml {
             }
         };
 
-        val worldSize = 4000
+        val vetoFrontLayer = assembly {
+            val n = 3
+            repeat(n) { j ->
+                val step = Veto.Width.mm + 2 * Veto.WrappingThickness.mm + Veto.SeparationAdjacent.mm
+                val offset = step * (n - 1) / 2.0
+                if (j == 1) {
+                    physVolume(veto(VetoLengths.LongSideSmall)) {
+                        name = "vetoSmall$j"
+                        position {
+                            x = step * j - offset
+                            z = (VetoLengths.LongSideSmall.mm - VetoLengths.LongSideStandard.mm) / 2
+                        }
+                    }
+                    // rotated
+                    physVolume(veto(VetoLengths.LongSideSmall)) {
+                        name = "vetoSmallRotated$j"
+                        position {
+                            x = step * j - offset
+                            z = -(VetoLengths.LongSideSmall.mm - VetoLengths.LongSideStandard.mm) / 2
+                        }
+                        rotation { unit = AUnit.DEG; x = 180; }
+                    }
+                } else {
+                    physVolume(veto(VetoLengths.LongSideStandard)) {
+                        name = "veto$j"
+                        position { x = step * j - offset }
+                    }
+                }
+            }
+        }
+
+        val worldSize = 2000
         val worldBox = solids.box(worldSize, worldSize, worldSize, "worldBox")
         world = volume(materialsMap["World"]!!, worldBox, "world") {
             physVolume(chamberVolume()) {
@@ -585,17 +621,75 @@ val geometry = Gdml {
                 name = "Shielding"
             }
 
-            for (i in 0..2) {
+            val yShieldingDistance =
+                Shielding.SizeXY.mm / 2 + Shielding.EnvelopeThickness.mm + Veto.FullThickness.mm / 2
+            val xShieldingDistance = yShieldingDistance
+            val zShieldingDistance =
+                Shielding.SizeZ.mm / 2 + Shielding.EnvelopeThickness.mm + Veto.FullThickness.mm / 2
+
+            val nLayers = 3
+            repeat(nLayers) { i ->
                 physVolume(vetoLayer(4)) {
                     name = "VetoLayerTop$i"
                     position {
-                        y =
-                            Shielding.SizeXY.mm / 2 + Shielding.EnvelopeThickness.mm + Veto.FullThickness.mm / 2 + (Veto.FullThickness.mm + 20) * i
+                        y = yShieldingDistance + (Veto.FullThickness.mm + 20) * i + 20
+                        z = -Shielding.OffsetZ.mm
                     }
-                    rotation { unit = AUnit.DEG; x = 0 }
+                    rotation { unit = AUnit.DEG; y = 180 }
                 }
             }
-
+            repeat(nLayers) { i ->
+                physVolume(vetoLayer(4)) {
+                    name = "VetoLayerBottom$i"
+                    position {
+                        y = -yShieldingDistance - (Veto.FullThickness.mm + 0) * i - 20
+                        z = -Shielding.OffsetZ.mm
+                    }
+                    rotation { unit = AUnit.DEG; y = 180 * (i + 1) }
+                }
+            }
+            repeat(nLayers) { i ->
+                physVolume(vetoLayer(4)) {
+                    name = "VetoLayerBack$i"
+                    position {
+                        z = -zShieldingDistance - Shielding.OffsetZ.mm - 130 - (Veto.FullThickness.mm + 20) * i
+                        y = 80
+                    }
+                    rotation { unit = AUnit.DEG; x = -90 }
+                }
+            }
+            repeat(nLayers) { i ->
+                physVolume(vetoLayer(4)) {
+                    name = "VetoLayerEast$i"
+                    position {
+                        x = -xShieldingDistance - 130 - (Veto.FullThickness.mm + 20) * i
+                        y = 0
+                        z = -Shielding.OffsetZ.mm - 30
+                    }
+                    rotation { unit = AUnit.DEG; x = -90; z = 90 }
+                }
+            }
+            repeat(nLayers) { i ->
+                physVolume(vetoLayer(4)) {
+                    name = "VetoLayerWest$i"
+                    position {
+                        x = xShieldingDistance + 130 + (Veto.FullThickness.mm + 20) * i
+                        y = 0
+                        z = -Shielding.OffsetZ.mm
+                    }
+                    rotation { unit = AUnit.DEG; x = 0; z = 90; y = 0 }
+                }
+            }
+            repeat(nLayers) { i ->
+                physVolume(vetoFrontLayer) {
+                    name = "VetoLayerFront$i"
+                    position {
+                        y = 0
+                        z = -Shielding.OffsetZ.mm + zShieldingDistance + 130 + (Veto.FullThickness.mm + 20) * i
+                    }
+                    rotation { unit = AUnit.DEG; x = -90; y = 90 }
+                }
+            }
         }
     }
 }
