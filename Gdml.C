@@ -10,7 +10,7 @@ void Gdml(string gdmlFilename="Setup.gdml"){
         }
         string materialName = geoVolume->GetMaterial()->GetName();
         if (materialName == "G4_AIR" || materialName == "G4_Galactic" || materialName == "Vacuum"){
-             geoVolume->SetTransparency(95);
+             geoVolume->SetTransparency(100);
         }else{
              geoVolume->SetTransparency(transparency);
         }
@@ -36,11 +36,11 @@ void Gdml(string gdmlFilename="Setup.gdml"){
     auto viewer = gEve->GetDefaultGLViewer();
     // viewer->GetClipSet()->SetClipType(TGLClip::EType(2));
     viewer->CurrentCamera().Reset();
-    //viewer->SetCurrentCamera(TGLViewer::kCameraOrthoZOY);
-    //viewer->SetCurrentCamera(TGLViewer::kCameraOrthoXOY);
-    //viewer->SetCurrentCamera(TGLViewer::kCameraOrthoXOZ);
-    viewer->SetCurrentCamera(TGLViewer::kCameraPerspXOZ);
-    viewer->CurrentCamera().RotateRad(0, -0.25);
+    viewer->SetCurrentCamera(TGLViewer::kCameraOrthoZOY); // side view
+    //viewer->SetCurrentCamera(TGLViewer::kCameraOrthoXOY); // front view
+    //viewer->SetCurrentCamera(TGLViewer::kCameraOrthoXOZ); // top view
+    //viewer->SetCurrentCamera(TGLViewer::kCameraPerspXOZ);
+    //viewer->CurrentCamera().RotateRad(0, -0.25);
     
     viewer->DoDraw();
 }
