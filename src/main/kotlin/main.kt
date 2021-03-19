@@ -423,7 +423,7 @@ val geometry = Gdml {
             }
         };
         fun veto(length: VetoLengths, includePMT: Boolean = false): GdmlRef<GdmlAssembly> {
-            val l = "[${length.mm}mm]"
+            val l = "${length.mm}mm"
             val scintillatorSolid = solids.box(
                 Veto.Width.mm,
                 Veto.Thickness.mm,
