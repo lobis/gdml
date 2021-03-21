@@ -4,7 +4,7 @@
 
 using namespace std;
 
-void parseGdml(const string &filename = "Setup.gdml") {
+void parseGdml(const string &filename = "babyIaxo.gdml") {
     G4GDMLParser parser;
     cout << "Reading from '" << filename << "'" << endl;
     parser.Read(filename.c_str());

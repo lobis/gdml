@@ -14,7 +14,7 @@ void Gdml(string gdmlFilename="Setup.gdml"){
             }
             double density = geoVolume->GetMaterial()->GetDensity();
             string materialName = geoVolume->GetMaterial()->GetName();
-            cout << geoVolume->GetName() << endl;
+            //cout << geoVolume->GetName() << endl;
             if (materialName == "G4_AIR" || materialName == "G4_Galactic" || materialName == "Vacuum"){
                  geoVolume->SetTransparency(100);
             }else{
@@ -31,8 +31,9 @@ void Gdml(string gdmlFilename="Setup.gdml"){
     auto viewer = gEve->GetDefaultGLViewer();
     // viewer->GetClipSet()->SetClipType(TGLClip::EType(2));
     viewer->CurrentCamera().Reset();
-    //viewer->SetCurrentCamera(TGLViewer::kCameraPerspXOZ);
+    viewer->SetCurrentCamera(TGLViewer::kCameraPerspXOZ);
     //viewer->CurrentCamera().RotateRad(0, -0.25);
+    /*
     for (auto & kv : map<string, TGLViewer::ECameraType>{{"OrthoZOY", TGLViewer::kCameraOrthoZOY}, {"OrthoXOZ", TGLViewer::kCameraOrthoXOZ}, {"OrthoXOY", TGLViewer::kCameraOrthoXOY}}){
         viewer->CurrentCamera().Reset();
         viewer->SetCurrentCamera(kv.second);
@@ -41,4 +42,5 @@ void Gdml(string gdmlFilename="Setup.gdml"){
         cout << "Saving perspective '" << kv.first << "' to " << pictureName << endl;
         viewer->SavePictureWidth(pictureName.c_str(), 100);
     }
+    */
 }
