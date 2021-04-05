@@ -91,6 +91,7 @@ enum class Veto(val mm: Double) {
     TODO: find a better way to organize materials which supports autocompletion
  */
 val geometry = Gdml {
+
     loadMaterialsFromUrl("https://raw.githubusercontent.com/rest-for-physics/materials/4e2e72017e83ab6c2947e77f04365fbb92c42dc7/materials.xml")
     structure {
         val iaxoMaterials = object {
@@ -111,7 +112,6 @@ val geometry = Gdml {
             val scintillatorWrapping = resolve("G4_NEOPRENE")
             val pmt = resolve("G4_STAINLESS-STEEL")
         }
-
 
         val chamberVolume: GdmlRef<GdmlAssembly> by lazy {
             val chamberBodySolid = solids.subtraction(
@@ -263,6 +263,7 @@ val geometry = Gdml {
             val gasVolume = volume(iaxoMaterials.gas, gasSolid, "gasVolume")
 
             return@lazy assembly {
+                name = "Chamber"
                 physVolume(gasVolume, name = "gas")
                 physVolume(chamberBackplateVolume, name = "chamberBackplate") {
                     position(
@@ -395,11 +396,12 @@ val geometry = Gdml {
                 solids.subtraction(detectorPipeNotEmpty, detectorPipeInside, "detectorPipeSolid") {
                     position(z = DetectorPipe.InsideSection1of3Length.mm / 2 - DetectorPipe.ChamberFlangeThickness.mm / 2)
                 }
-            val detectorPipeVolume = volume(iaxoMaterials.copper!!, detectorPipeSolid, "detectorPipeVolume")
+            val detectorPipeVolume = volume(iaxoMaterials.copper, detectorPipeSolid, "detectorPipeVolume")
             val detectorPipeFillingVolume =
                 volume(iaxoMaterials.vacuum, detectorPipeInside, "detectorPipeFillingVolume")
 
             return@lazy assembly {
+                name = "DetectorPipe"
                 physVolume(detectorPipeVolume) {
                     name = "detectorPipe"
                 }
@@ -453,6 +455,7 @@ val geometry = Gdml {
             )
 
             return@lazy assembly {
+                name = "Shielding"
                 physVolume(leadShieldingVolume, name = "shielding20cm") {
                     position(z = -Shielding.OffsetZ.mm)
                 }
@@ -511,7 +514,7 @@ val geometry = Gdml {
                     "scintillatorWrappingRemoveSideSolid"
                 ), "scintillatorWrappingSolid$label.solid"
             ) {
-                position(z = length.mm / 2 + Veto.WrappingThickness.mm / 2)
+                position(z = -length.mm / 2 - Veto.WrappingThickness.mm / 2)
             }
 
             val scintillatorWrappingVolume = volume(
@@ -552,8 +555,6 @@ val geometry = Gdml {
                     name = "scintillatorLightGuideVolume$label"
                 )
 
-            // this should be in a 'if (includePMT)' but we need to define an empty 'GdmlVolume' or equivalent...
-            // TODO: find out how
             val scintillatorPhotomultiplierSolid = solids.tube(
                 Veto.PhotomultiplierDiameter.mm / 2,
                 Veto.PhotomultiplierLength.mm,
@@ -606,17 +607,6 @@ val geometry = Gdml {
             }
         };
 
-        fun vetoGroup(): GdmlRef<GdmlAssembly> {
-            // TODO: find out why this is not displayed, yet it can be seen in the ROOT event viewer and looks OK
-            return assembly {
-                for (i in 1..4) {
-                    physVolume(vetoLayer(4), name = "layer$i") {
-                        position { y = (i - 1) * 70 }
-                    }
-                }
-            }
-        }
-
         val vetoFrontLayer = assembly {
             val n = 3
             repeat(n) { j ->
@@ -647,7 +637,6 @@ val geometry = Gdml {
 
         val worldSize = 2000
         val worldBox = solids.box(worldSize, worldSize, worldSize, "worldBox")
-
         world = volume(iaxoMaterials.world, worldBox, "world") {
             physVolume(chamberVolume, name = "Chamber")
             physVolume(detectorPipeVolume, name = "DetectorPipe") {
