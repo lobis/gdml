@@ -1,11 +1,11 @@
 import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
-    kotlin("jvm") version "1.4.31"
+    kotlin("jvm") version "1.5.0-M2"
     application
 }
 
-group = "me.luis"
+group = "me.lobis"
 version = "1.0-SNAPSHOT"
 
 repositories {
@@ -16,7 +16,7 @@ repositories {
 }
 dependencies {
     testImplementation(kotlin("test-junit"))
-    implementation("space.kscience:gdml:0.4.0-dev-3")
+    implementation("space.kscience:gdml:0.4.0-dev-8") // old dev-3
 }
 
 tasks.test {
@@ -24,7 +24,7 @@ tasks.test {
 }
 
 tasks.withType<KotlinCompile>() {
-    kotlinOptions.jvmTarget = "14"
+    kotlinOptions.jvmTarget = "11"
 }
 
 application {
