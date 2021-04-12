@@ -294,7 +294,7 @@ val geometry = Gdml {
             }
         }
 
-        //lazyly initialize the value to avoid several calls
+        // lazily initialize the value to avoid several calls
         val detectorPipeVolume: GdmlRef<GdmlAssembly> by lazy {
 
             val detectorPipeChamberFlangeSolid = solids.tube(
@@ -411,7 +411,6 @@ val geometry = Gdml {
                 }
             }
         }
-
 
         val shieldingVolume: GdmlRef<GdmlAssembly> by lazy {
             val leadBoxSolid =
@@ -635,6 +634,114 @@ val geometry = Gdml {
             }
         }
 
+        val yShieldingDistance =
+            Shielding.SizeXY.mm / 2 + Shielding.EnvelopeThickness.mm + Veto.FullThickness.mm / 2
+        val zShieldingDistance =
+            Shielding.SizeZ.mm / 2 + Shielding.EnvelopeThickness.mm + Veto.FullThickness.mm / 2
+
+        val nLayers = 3
+        val vetoGroupTop: GdmlRef<GdmlAssembly> by lazy {
+            return@lazy assembly {
+                name = "vetoGroupTop"
+                repeat(nLayers) { i ->
+                    physVolume(vetoLayer(4), name = "VetoLayerTop$i") {
+                        position {
+                            y = yShieldingDistance + (Veto.FullThickness.mm + 20) * i + 20
+                            z = -Shielding.OffsetZ.mm
+                        }
+                        rotation { unit = AUnit.DEG; y = 180 }
+                    }
+                }
+            }
+        }
+
+        val vetoGroupBottom: GdmlRef<GdmlAssembly> by lazy {
+            return@lazy assembly {
+                name = "vetoGroupBottom"
+                repeat(nLayers) { i ->
+                    physVolume(vetoLayer(4), name = "VetoLayerBottom$i") {
+                        position {
+                            y = -yShieldingDistance - (Veto.FullThickness.mm + 0) * i - 20
+                            z = -Shielding.OffsetZ.mm
+                        }
+                        rotation { unit = AUnit.DEG; y = 180 * (i + 1) }
+                    }
+                }
+            }
+        }
+
+        val vetoGroupBack: GdmlRef<GdmlAssembly> by lazy {
+            return@lazy assembly {
+                name = "vetoGroupBack"
+                repeat(nLayers) { i ->
+                    physVolume(vetoLayer(4), name = "VetoLayerBack$i") {
+                        position {
+                            z = -zShieldingDistance - Shielding.OffsetZ.mm - 130 - (Veto.FullThickness.mm + 20) * i
+                            y = 80
+                        }
+                        rotation { unit = AUnit.DEG; x = -90 }
+                    }
+                }
+            }
+        }
+
+        val vetoGroupEast: GdmlRef<GdmlAssembly> by lazy {
+            return@lazy assembly {
+                name = "vetoGroupEast"
+                repeat(nLayers) { i ->
+                    physVolume(vetoLayer(4), name = "VetoLayerEast$i") {
+                        position {
+                            x = -yShieldingDistance - 130 - (Veto.FullThickness.mm + 20) * i
+                            z = -Shielding.OffsetZ.mm - 30
+                        }
+                        rotation { unit = AUnit.DEG; x = -90; z = 90 }
+                    }
+                }
+            }
+        }
+
+        val vetoGroupWest: GdmlRef<GdmlAssembly> by lazy {
+            return@lazy assembly {
+                name = "vetoGroupWest"
+                repeat(nLayers) { i ->
+                    physVolume(vetoLayer(4), name = "VetoLayerWest$i") {
+                        position {
+                            x = yShieldingDistance + 130 + (Veto.FullThickness.mm + 20) * i
+                            z = -Shielding.OffsetZ.mm
+                        }
+                        rotation { unit = AUnit.DEG; x = 0; z = 90; y = 0 }
+                    }
+                }
+            }
+        }
+
+        val vetoGroupFront: GdmlRef<GdmlAssembly> by lazy {
+            return@lazy assembly {
+                name = "vetoGroupFront"
+                repeat(nLayers) { i ->
+                    physVolume(vetoFrontLayer, name = "VetoLayerFront$i") {
+                        position {
+                            z = -Shielding.OffsetZ.mm + zShieldingDistance + 130 + (Veto.FullThickness.mm + 20) * i
+                        }
+                        rotation { unit = AUnit.DEG; x = -90; y = 90 }
+                    }
+                }
+            }
+        }
+        // all vetoes
+        val vetoSystem: GdmlRef<GdmlAssembly> by lazy {
+            return@lazy assembly {
+                physVolume(vetoGroupTop, name = "vetoGroupTop")
+                physVolume(vetoGroupBottom, name = "vetoGroupBottom")
+                physVolume(vetoGroupEast, name = "vetoGroupEast")
+                physVolume(vetoGroupWest, name = "vetoGroupWest")
+                physVolume(vetoGroupFront, name = "vetoGroupFront")
+                physVolume(vetoGroupBack, name = "vetoGroupBack")
+
+            }
+        }
+
+
         val worldSize = 2000
         val worldBox = solids.box(worldSize, worldSize, worldSize, "worldBox")
         world = volume(iaxoMaterials.world, worldBox, "world") {
@@ -643,67 +750,7 @@ val geometry = Gdml {
                 position(z = DetectorPipe.ZinWorld.mm)
             }
             physVolume(shieldingVolume, name = "Shielding")
-
-            val yShieldingDistance =
-                Shielding.SizeXY.mm / 2 + Shielding.EnvelopeThickness.mm + Veto.FullThickness.mm / 2
-
-            val zShieldingDistance =
-                Shielding.SizeZ.mm / 2 + Shielding.EnvelopeThickness.mm + Veto.FullThickness.mm / 2
-
-            val nLayers = 3
-            repeat(nLayers) { i ->
-                physVolume(vetoLayer(4), name = "VetoLayerTop$i") {
-                    position {
-                        y = yShieldingDistance + (Veto.FullThickness.mm + 20) * i + 20
-                        z = -Shielding.OffsetZ.mm
-                    }
-                    rotation { unit = AUnit.DEG; y = 180 }
-                }
-            }
-            repeat(nLayers) { i ->
-                physVolume(vetoLayer(4), name = "VetoLayerBottom$i") {
-                    position {
-                        y = -yShieldingDistance - (Veto.FullThickness.mm + 0) * i - 20
-                        z = -Shielding.OffsetZ.mm
-                    }
-                    rotation { unit = AUnit.DEG; y = 180 * (i + 1) }
-                }
-            }
-            repeat(nLayers) { i ->
-                physVolume(vetoLayer(4), name = "VetoLayerBack$i") {
-                    position {
-                        z = -zShieldingDistance - Shielding.OffsetZ.mm - 130 - (Veto.FullThickness.mm + 20) * i
-                        y = 80
-                    }
-                    rotation { unit = AUnit.DEG; x = -90 }
-                }
-            }
-            repeat(nLayers) { i ->
-                physVolume(vetoLayer(4), name = "VetoLayerEast$i") {
-                    position {
-                        x = -yShieldingDistance - 130 - (Veto.FullThickness.mm + 20) * i
-                        z = -Shielding.OffsetZ.mm - 30
-                    }
-                    rotation { unit = AUnit.DEG; x = -90; z = 90 }
-                }
-            }
-            repeat(nLayers) { i ->
-                physVolume(vetoLayer(4), name = "VetoLayerWest$i") {
-                    position {
-                        x = yShieldingDistance + 130 + (Veto.FullThickness.mm + 20) * i
-                        z = -Shielding.OffsetZ.mm
-                    }
-                    rotation { unit = AUnit.DEG; x = 0; z = 90; y = 0 }
-                }
-            }
-            repeat(nLayers) { i ->
-                physVolume(vetoFrontLayer, name = "VetoLayerFront$i") {
-                    position {
-                        z = -Shielding.OffsetZ.mm + zShieldingDistance + 130 + (Veto.FullThickness.mm + 20) * i
-                    }
-                    rotation { unit = AUnit.DEG; x = -90; y = 90 }
-                }
-            }
+            physVolume(vetoSystem, name = "vetoSystem")
         }
     }
 }
